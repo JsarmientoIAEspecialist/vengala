@@ -41,19 +41,21 @@ import org.osmdroid.views.overlay.Marker
 import java.io.File
 
 /**
- * Mapa base oscuro de CARTO (datos © OpenStreetMap). A diferencia del servidor
- * estándar de OSM, este permite descargar zonas para uso offline (el tile
- * source por defecto de osmdroid PROHÍBE la descarga masiva y crashea el
- * CacheManager). Además el mapa oscuro le va al tema nocturno de Vengala.
+ * Mosaicos oficiales de OpenStreetMap, sin API key.
+ *
+ * La descarga offline se mantiene DENTRO de lo que permite la política de OSM
+ * (menos de 250 mosaicos por zona): ~1,8 km a la redonda, zoom 13-18. Se usa
+ * un XYTileSource propio porque el MAPNIK integrado de osmdroid veta el
+ * CacheManager por completo, incluso para zonas pequeñas permitidas.
  */
-private val DarkTiles = XYTileSource(
-    "CartoDark", 3, 19, 256, ".png",
+private val OsmTiles = XYTileSource(
+    "OSMPublico", 3, 19, 256, ".png",
     arrayOf(
-        "https://a.basemaps.cartocdn.com/dark_all/",
-        "https://b.basemaps.cartocdn.com/dark_all/",
-        "https://c.basemaps.cartocdn.com/dark_all/",
+        "https://a.tile.openstreetmap.org/",
+        "https://b.tile.openstreetmap.org/",
+        "https://c.tile.openstreetmap.org/",
     ),
-    "© OpenStreetMap contributors © CARTO",
+    "© OpenStreetMap contributors",
 )
 
 /**
@@ -98,9 +100,11 @@ fun MapScreen() {
                     userAgentValue = ctx.packageName
                     osmdroidBasePath = File(ctx.filesDir, "osmdroid")
                     osmdroidTileCache = File(ctx.filesDir, "osmdroid/tiles")
+                    // Los mosaicos guardados siguen sirviendo offline por 30 días
+                    expirationExtendedDuration = 30L * 24 * 3600 * 1000
                 }
                 MapView(ctx).apply {
-                    setTileSource(DarkTiles)
+                    setTileSource(OsmTiles)
                     setMultiTouchControls(true)
                     controller.setZoom(17.0)
                     overlays.add(
@@ -169,13 +173,14 @@ fun MapScreen() {
                     if (map == null || me == null) {
                         Toast.makeText(context, "Espera la señal GPS para saber qué zona bajar", Toast.LENGTH_SHORT).show()
                     } else {
-                        // ~±2 km alrededor tuyo, zoom 13-18 (~15 MB). Necesita internet.
+                        // ±0.9 km, zoom 13-18: <250 mosaicos, dentro de la
+                        // política de uso de OSM. Necesita internet.
                         val bb = BoundingBox(
-                            me.latitude + 0.02, me.longitude + 0.02,
-                            me.latitude - 0.02, me.longitude - 0.02,
+                            me.latitude + 0.008, me.longitude + 0.008,
+                            me.latitude - 0.008, me.longitude - 0.008,
                         )
                         try {
-                            CacheManager(map).downloadAreaAsync(context, bb, 13, 17)
+                            CacheManager(map).downloadAreaAsync(context, bb, 13, 18)
                             Toast.makeText(
                                 context,
                                 "Descargando mapa... no cierres la app (necesita internet)",
