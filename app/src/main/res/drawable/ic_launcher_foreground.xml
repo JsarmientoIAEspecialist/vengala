@@ -1,17 +1,70 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Bengala neón sobre fondo nocturno -->
+
+    <!-- Halo magenta detrás de la bengala -->
+    <path android:pathData="M54,54 m-24,0 a24,24 0 1,1 48,0 a24,24 0 1,1 -48,0">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="54"
+                android:centerY="54"
+                android:gradientRadius="24">
+                <item android:offset="0.0" android:color="#66FF2E88" />
+                <item android:offset="0.6" android:color="#22FF2E88" />
+                <item android:offset="1.0" android:color="#00FF2E88" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Anillo exterior de radar (cian tenue) -->
     <path
-        android:fillColor="#FF2E88"
-        android:pathData="M54,22 L58,44 L78,38 L61,52 L72,72 L54,60 L36,72 L47,52 L30,38 L50,44 Z" />
+        android:pathData="M54,54 m-27,0 a27,27 0 1,1 54,0 a27,27 0 1,1 -54,0"
+        android:strokeColor="#4D00E5FF"
+        android:strokeWidth="2" />
+    <!-- Anillo interior de radar -->
     <path
-        android:fillColor="#00E5FF"
-        android:pathData="M51,63 L57,63 L55.5,86 L52.5,86 Z" />
-    <path
-        android:fillColor="#B6FF00"
-        android:pathData="M54,30 m-3,0 a3,3 0 1,1 6,0 a3,3 0 1,1 -6,0" />
+        android:pathData="M54,54 m-20,0 a20,20 0 1,1 40,0 a20,20 0 1,1 -40,0"
+        android:strokeColor="#8000E5FF"
+        android:strokeWidth="2" />
+
+    <!-- Blips: tu parche en el radar -->
+    <path android:fillColor="#B6FF00"
+        android:pathData="M73.9,37.3 m-3,0 a3,3 0 1,1 6,0 a3,3 0 1,1 -6,0" />
+    <path android:fillColor="#00E5FF"
+        android:pathData="M70.5,63.5 m-2.6,0 a2.6,2.6 0 1,1 5.2,0 a2.6,2.6 0 1,1 -5.2,0" />
+    <path android:fillColor="#FF2E88"
+        android:pathData="M39.5,71.5 m-2.6,0 a2.6,2.6 0 1,1 5.2,0 a2.6,2.6 0 1,1 -5.2,0" />
+
+    <!-- Bengala: estrella de 8 puntas con destello de lente (N/S/E/O largas) -->
+    <path android:pathData="M54,36 L56.1,48.9 L61.8,46.2 L59.1,51.9 L72,54 L59.1,56.1 L61.8,61.8 L56.1,59.1 L54,72 L51.9,59.1 L46.2,61.8 L48.9,56.1 L36,54 L48.9,51.9 L46.2,46.2 L51.9,48.9 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="54"
+                android:centerY="54"
+                android:gradientRadius="18">
+                <item android:offset="0.0" android:color="#FFFFFF" />
+                <item android:offset="0.25" android:color="#FF9BC8" />
+                <item android:offset="0.6" android:color="#FF2E88" />
+                <item android:offset="1.0" android:color="#B517E8" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Núcleo blanco incandescente -->
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M54,47.5 L55.8,52.2 L60.5,54 L55.8,55.8 L54,60.5 L52.2,55.8 L47.5,54 L52.2,52.2 Z" />
+
+    <!-- Chispas sueltas -->
+    <path android:fillColor="#CCFFFFFF"
+        android:pathData="M44,40 m-1.4,0 a1.4,1.4 0 1,1 2.8,0 a1.4,1.4 0 1,1 -2.8,0" />
+    <path android:fillColor="#99FF2E88"
+        android:pathData="M66,44 m-1.2,0 a1.2,1.2 0 1,1 2.4,0 a1.2,1.2 0 1,1 -2.4,0" />
+    <path android:fillColor="#9900E5FF"
+        android:pathData="M46,66.5 m-1.2,0 a1.2,1.2 0 1,1 2.4,0 a1.2,1.2 0 1,1 -2.4,0" />
 </vector>
