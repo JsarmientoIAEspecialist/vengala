@@ -22,6 +22,14 @@ object MeshRepository {
     private val _stats = MutableStateFlow(MeshStats())
     val stats: StateFlow<MeshStats> = _stats
 
+    /** Peer que el usuario está siguiendo con la flecha (null = ninguno). */
+    private val _trackedPeer = MutableStateFlow<Long?>(null)
+    val trackedPeer: StateFlow<Long?> = _trackedPeer
+
+    fun setTrackedPeer(id: Long?) {
+        _trackedPeer.value = id
+    }
+
     private const val MAX_MESSAGES = 500
     private const val PEER_EXPIRY_MS = 10 * 60_000L
 

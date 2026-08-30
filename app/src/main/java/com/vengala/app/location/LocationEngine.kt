@@ -11,7 +11,10 @@ import com.vengala.app.data.MyLocation
 
 /**
  * GPS puro con LocationManager: funciona sin internet y sin Google Play Services.
- * (El GPS es una radio receptora de satélites; no necesita señal de celular.)
+ *
+ * Pide fixes cada 2 s y filtra: solo publica una posición si es más precisa
+ * que la actual o si la actual ya envejeció. Así la posición que viaja por el
+ * mesh es siempre el mejor fix disponible, no el último ruido.
  */
 @SuppressLint("MissingPermission")
 class LocationEngine(
@@ -20,9 +23,19 @@ class LocationEngine(
 ) {
     private val manager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
     private var running = false
+    private var best: Location? = null
+
+    private fun accept(candidate: Location): Boolean {
+        val current = best ?: return true
+        val currentAgeMs = System.currentTimeMillis() - current.time
+        if (currentAgeMs > 10_000) return true          // el fix actual ya es viejo
+        return candidate.accuracy <= current.accuracy + 5f
+    }
 
     private val listener = object : LocationListener {
         override fun onLocationChanged(location: Location) {
+            if (!accept(location)) return
+            best = location
             onLocation(
                 MyLocation(
                     latitude = location.latitude,
@@ -46,13 +59,13 @@ class LocationEngine(
                 listener.onLocationChanged(it)
             }
             manager.requestLocationUpdates(
-                LocationManager.GPS_PROVIDER, 10_000L, 5f, listener,
+                LocationManager.GPS_PROVIDER, 2_000L, 1f, listener,
             )
-            // En interiores el GPS falla; la red (sin datos, solo celdas/wifi cacheado)
+            // En interiores el GPS falla; la red (celdas/wifi cacheado, sin datos)
             // a veces da un fix aproximado.
             if (manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
                 manager.requestLocationUpdates(
-                    LocationManager.NETWORK_PROVIDER, 30_000L, 20f, listener,
+                    LocationManager.NETWORK_PROVIDER, 15_000L, 10f, listener,
                 )
             }
             running = true

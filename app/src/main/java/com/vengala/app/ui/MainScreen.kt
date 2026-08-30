@@ -35,6 +35,7 @@ import com.vengala.app.ui.screens.ChatScreen
 import com.vengala.app.ui.screens.PeersScreen
 import com.vengala.app.ui.screens.RadarScreen
 import com.vengala.app.ui.screens.SettingsScreen
+import com.vengala.app.ui.screens.TrackerScreen
 
 private data class Tab(val label: String, val icon: ImageVector)
 
@@ -42,6 +43,7 @@ private data class Tab(val label: String, val icon: ImageVector)
 fun MainScreen() {
     var selected by remember { mutableIntStateOf(0) }
     val peers by MeshRepository.peers.collectAsState()
+    val trackedPeer by MeshRepository.trackedPeer.collectAsState()
 
     val tabs = listOf(
         Tab("Chat", Icons.Filled.Chat),
@@ -57,7 +59,10 @@ fun MainScreen() {
                 tabs.forEachIndexed { index, tab ->
                     NavigationBarItem(
                         selected = selected == index,
-                        onClick = { selected = index },
+                        onClick = {
+                            selected = index
+                            MeshRepository.setTrackedPeer(null)
+                        },
                         label = { Text(tab.label, style = MaterialTheme.typography.labelSmall) },
                         icon = {
                             if (index == 2 && peers.isNotEmpty()) {
@@ -81,11 +86,16 @@ fun MainScreen() {
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            when (selected) {
-                0 -> ChatScreen()
-                1 -> RadarScreen()
-                2 -> PeersScreen()
-                3 -> SettingsScreen()
+            val tracked = trackedPeer
+            if (tracked != null) {
+                TrackerScreen(peerId = tracked)
+            } else {
+                when (selected) {
+                    0 -> ChatScreen()
+                    1 -> RadarScreen()
+                    2 -> PeersScreen()
+                    3 -> SettingsScreen()
+                }
             }
         }
     }

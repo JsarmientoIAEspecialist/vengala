@@ -150,10 +150,11 @@ fun SettingsScreen() {
 
         Spacer(Modifier.height(24.dp))
         Text(
-            "Cómo funciona: tu teléfono forma una red mesh por Bluetooth con los " +
-                "teléfonos cercanos. Los mensajes y ubicaciones saltan de teléfono en " +
-                "teléfono (hasta 7 saltos) y se guardan un rato para entregarse a quien " +
-                "estaba lejos. Nada sale a internet; todo va cifrado con tu código de fiesta.",
+            "Cómo funciona: tu teléfono forma una red interna P2P por Bluetooth con " +
+                "los teléfonos cercanos — sin servidores, sin internet, sin operador. " +
+                "El código de fiesta es el nombre y la llave de tu red privada. Los " +
+                "mensajes y ubicaciones saltan de teléfono en teléfono (hasta 7 saltos) " +
+                "y se guardan un rato para entregarse a quien estaba lejos.",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

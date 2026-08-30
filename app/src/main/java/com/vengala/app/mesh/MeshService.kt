@@ -45,7 +45,7 @@ class MeshService : Service() {
 
         const val MAX_OUTGOING_LINKS = 5
         const val CONNECT_COOLDOWN_MS = 20_000L
-        const val LOCATION_BEACON_MS = 30_000L
+        const val LOCATION_BEACON_MS = 15_000L
         const val PROFILE_BEACON_MS = 60_000L
 
         fun start(context: Context) {

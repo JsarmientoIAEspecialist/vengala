@@ -1,6 +1,7 @@
 package com.vengala.app.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,6 +44,12 @@ fun PeersScreen() {
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
+            )
+            Text(
+                "Toca a alguien con 🧭 y una flecha te lleva hasta esa persona.",
+                style = MaterialTheme.typography.labelSmall,
+                color = NeonLime,
+                modifier = Modifier.padding(top = 6.dp),
             )
             DiagnosticsCard(
                 bluetoothOn = stats.bluetoothOn,
@@ -90,11 +97,13 @@ fun PeersScreen() {
 private fun PeerCard(peer: Peer, distanceMeters: Double?) {
     val secondsAgo = (System.currentTimeMillis() - peer.lastSeen) / 1000
     val fresh = secondsAgo < 120
+    val canTrack = peer.location != null
 
     Row(
         Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))
+            .clickable(enabled = canTrack) { MeshRepository.setTrackedPeer(peer.id) }
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -123,6 +132,13 @@ private fun PeerCard(peer: Peer, distanceMeters: Double?) {
                 Geo.formatDistance(it),
                 style = MaterialTheme.typography.titleMedium,
                 color = NeonCyan,
+            )
+        }
+        if (canTrack) {
+            Text(
+                "🧭",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(start = 10.dp),
             )
         }
     }
