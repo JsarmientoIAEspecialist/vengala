@@ -1,13 +1,24 @@
 package com.vengala.app.ui.screens
 
+import android.content.Context
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
@@ -16,15 +27,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -40,18 +54,21 @@ import com.vengala.app.ui.theme.NeonCyan
 import com.vengala.app.ui.theme.NeonLime
 import com.vengala.app.ui.theme.NeonMagenta
 import kotlinx.coroutines.delay
-import androidx.compose.runtime.LaunchedEffect
 import kotlin.math.abs
 import kotlin.math.min
+import kotlin.math.pow
 
 /**
- * Modo búsqueda: flecha gigante que apunta hacia la persona seleccionada.
- * Verde cuando apuntas bien: camina en esa dirección y mira la distancia bajar.
+ * Modo búsqueda en dos etapas:
+ *  - Lejos: flecha con brújula guiada por GPS.
+ *  - Cerca (<~20 m): caliente/frío por intensidad de señal Bluetooth directa,
+ *    que a corta distancia es mucho más precisa que el GPS. Vibra al acercarte.
  */
 @Composable
 fun TrackerScreen(peerId: Long) {
     val peers by MeshRepository.peers.collectAsState()
     val myLocation by MeshRepository.myLocation.collectAsState()
+    val rssiMap by MeshRepository.peerRssi.collectAsState()
     val context = LocalContext.current
     var azimuth by remember { mutableFloatStateOf(0f) }
     var nowTick by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -72,8 +89,50 @@ fun TrackerScreen(peerId: Long) {
     val loc = peer?.location
     val me = myLocation
 
+    // Señal Bluetooth fresca (< 10 s) hacia esta persona
+    val sample = rssiMap[peerId]?.takeIf { nowTick - it.timestamp < 10_000 }
+    // Distancia estimada por RSSI: modelo log-distancia (txPower -59 dBm @ 1 m)
+    val rssiMeters = sample?.let { 10.0.pow((-59.0 - it.rssi) / (10.0 * 2.2)) }
+    val proximityTier = sample?.let {
+        when {
+            it.rssi >= -55f -> 0   // MUY CERCA  (~<3 m)
+            it.rssi >= -67f -> 1   // CERCA      (~3-8 m)
+            it.rssi >= -80f -> 2   // TIBIO      (~8-20 m)
+            else -> 3              // FRÍO       (>20 m)
+        }
+    }
+
+    // Vibra al pasar a un nivel más cercano (y doble al llegar)
+    var lastTier by remember { mutableIntStateOf(99) }
+    LaunchedEffect(proximityTier) {
+        val tier = proximityTier ?: return@LaunchedEffect
+        if (tier < lastTier) {
+            val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            try {
+                if (Build.VERSION.SDK_INT >= 26) {
+                    val effect = if (tier == 0) {
+                        VibrationEffect.createWaveform(longArrayOf(0, 120, 80, 120), -1)
+                    } else {
+                        VibrationEffect.createOneShot(80, VibrationEffect.DEFAULT_AMPLITUDE)
+                    }
+                    vibrator.vibrate(effect)
+                }
+            } catch (_: Exception) {
+            }
+        }
+        lastTier = tier
+    }
+
+    val gpsDist = if (me != null && loc != null) {
+        Geo.distanceMeters(me.latitude, me.longitude, loc.latitude, loc.longitude)
+    } else null
+
+    // Modo cercano: la señal BT manda cuando existe y ya estamos a tiro
+    val nearMode = sample != null && (proximityTier!! <= 2 || gpsDist == null || gpsDist < 25.0)
+    val arrived = (proximityTier == 0) || (gpsDist != null && gpsDist < 10.0)
+
     Column(
-        Modifier.fillMaxSize().padding(16.dp),
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Row(
@@ -94,43 +153,34 @@ fun TrackerScreen(peerId: Long) {
 
         when {
             peer == null -> Message("Se perdió la señal de esta persona en el mesh.")
-            loc == null -> Message("${peer.name} todavía no comparte ubicación (¿tiene GPS y el interruptor activado?).")
-            me == null -> Message("Esperando tu señal GPS... sal a cielo abierto.")
+            loc == null && sample == null ->
+                Message("Sin ubicación GPS ni señal Bluetooth directa de ${peer.name} todavía. Acércate o espera unos segundos.")
             else -> {
-                val dist = Geo.distanceMeters(me.latitude, me.longitude, loc.latitude, loc.longitude)
-                val bearing = Geo.bearingDegrees(me.latitude, me.longitude, loc.latitude, loc.longitude)
-                var diff = (bearing - azimuth).toFloat() % 360f
-                if (diff > 180f) diff -= 360f
-                if (diff < -180f) diff += 360f
-                val aligned = abs(diff) < 20f
-                val arrived = dist < 15.0
-                val color = when {
-                    arrived -> NeonLime
-                    aligned -> NeonLime
-                    else -> NeonMagenta
-                }
+                // ----- Flecha (GPS) -----
+                if (me != null && loc != null && gpsDist != null && !arrived) {
+                    val bearing = Geo.bearingDegrees(me.latitude, me.longitude, loc.latitude, loc.longitude)
+                    var diff = (bearing - azimuth).toFloat() % 360f
+                    if (diff > 180f) diff -= 360f
+                    if (diff < -180f) diff += 360f
+                    val aligned = abs(diff) < 20f
+                    val color = if (aligned) NeonLime else NeonMagenta
 
-                Canvas(
-                    Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(1f)
-                        .padding(24.dp),
-                ) {
-                    val c = Offset(size.width / 2f, size.height / 2f)
-                    val r = min(size.width, size.height) / 2f
-                    drawCircle(NeonCyan.copy(alpha = 0.12f), r - 8f, c, style = Stroke(3f))
-                    if (arrived) {
-                        // Estás encima: pulso en vez de flecha
-                        drawCircle(NeonLime.copy(alpha = 0.25f), r * 0.55f, c)
-                        drawCircle(NeonLime, r * 0.18f, c)
-                    } else {
+                    Canvas(
+                        Modifier
+                            .fillMaxWidth(0.7f)
+                            .aspectRatio(1f)
+                            .padding(12.dp),
+                    ) {
+                        val c = Offset(size.width / 2f, size.height / 2f)
+                        val r = min(size.width, size.height) / 2f
+                        drawCircle(NeonCyan.copy(alpha = 0.12f), r - 8f, c, style = Stroke(3f))
                         rotate(degrees = diff, pivot = c) {
                             val h = r * 0.78f
                             val w = r * 0.52f
                             val arrow = Path().apply {
-                                moveTo(c.x, c.y - h)               // punta
+                                moveTo(c.x, c.y - h)
                                 lineTo(c.x + w / 2f, c.y + h * 0.45f)
-                                lineTo(c.x, c.y + h * 0.18f)       // muesca
+                                lineTo(c.x, c.y + h * 0.18f)
                                 lineTo(c.x - w / 2f, c.y + h * 0.45f)
                                 close()
                             }
@@ -141,26 +191,92 @@ fun TrackerScreen(peerId: Long) {
                             )
                         }
                     }
+                } else if (arrived) {
+                    Canvas(
+                        Modifier
+                            .fillMaxWidth(0.55f)
+                            .aspectRatio(1f)
+                            .padding(12.dp),
+                    ) {
+                        val c = Offset(size.width / 2f, size.height / 2f)
+                        val r = min(size.width, size.height) / 2f
+                        drawCircle(NeonLime.copy(alpha = 0.25f), r * 0.8f, c)
+                        drawCircle(NeonLime, r * 0.3f, c)
+                    }
                 }
 
+                // ----- Distancia principal -----
+                val mainText = when {
+                    arrived -> "¡AQUÍ!"
+                    nearMode && rssiMeters != null -> "~${rssiMeters.toInt().coerceAtLeast(1)} m"
+                    gpsDist != null -> Geo.formatDistance(gpsDist)
+                    else -> "..."
+                }
                 Text(
-                    if (arrived) "¡AQUÍ!" else Geo.formatDistance(dist),
-                    style = MaterialTheme.typography.titleLarge.copy(fontSize = 56.sp),
-                    color = color,
-                )
-                val staleness = (nowTick - loc.timestamp) / 1000
-                val uncertainty = (me.accuracyMeters + loc.accuracyMeters).toInt()
-                Text(
-                    "±$uncertainty m · posición de hace ${staleness}s",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 6.dp),
+                    mainText,
+                    style = MaterialTheme.typography.titleLarge.copy(fontSize = 54.sp),
+                    color = if (arrived) NeonLime else if (nearMode) NeonCyan else NeonMagenta,
                 )
                 Text(
                     when {
-                        arrived -> "Ya deberían estarse viendo. ¡Grita!"
-                        aligned -> "Flecha verde: camina de frente"
-                        else -> "Gira hasta que la flecha apunte hacia arriba y se ponga verde"
+                        arrived -> "señal Bluetooth al máximo · ya deberían verse"
+                        nearMode -> "midiendo por señal Bluetooth directa (más precisa que el GPS aquí)"
+                        me != null && loc != null ->
+                            "GPS ±${(me.accuracyMeters + loc.accuracyMeters).toInt()} m · posición de hace ${(nowTick - loc.timestamp) / 1000}s"
+                        else -> "sin GPS: guiándote solo por señal Bluetooth"
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
+
+                // ----- Termómetro caliente/frío -----
+                if (sample != null && proximityTier != null) {
+                    val fraction = ((sample.rssi + 95f) / 50f).coerceIn(0.05f, 1f)
+                    val tierLabel = listOf("MUY CERCA", "CERCA", "TIBIO", "FRÍO")[proximityTier]
+                    val tierColor = listOf(NeonLime, NeonLime, NeonCyan, NeonMagenta)[proximityTier]
+                    Column(Modifier.fillMaxWidth().padding(top = 20.dp)) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text("SEÑAL BLUETOOTH", style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(tierLabel, style = MaterialTheme.typography.labelSmall,
+                                color = tierColor)
+                        }
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .height(14.dp)
+                                .padding(top = 4.dp)
+                                .background(MaterialTheme.colorScheme.surfaceVariant,
+                                    RoundedCornerShape(7.dp)),
+                        ) {
+                            Box(
+                                Modifier
+                                    .fillMaxWidth(fraction)
+                                    .fillMaxHeight()
+                                    .background(tierColor, RoundedCornerShape(7.dp)),
+                            )
+                        }
+                    }
+                } else if (nearMode || gpsDist == null) {
+                    Text(
+                        "Sin señal Bluetooth directa: aún están a más de ~30 m o hay mucha gente en medio.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(top = 16.dp),
+                    )
+                }
+
+                Text(
+                    when {
+                        arrived -> "¡Grita o alza la mano!"
+                        nearMode -> "Camina despacio: la barra sube y el teléfono vibra al acercarte"
+                        else -> "Sigue la flecha; al acercarte cambia a caliente/frío por Bluetooth"
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

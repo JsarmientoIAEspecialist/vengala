@@ -167,6 +167,7 @@ class MeshService : Service() {
         if (seenAddresses.add(address)) {
             MeshRepository.updateStats { it.copy(devicesFound = seenAddresses.size) }
         }
+        MeshRepository.reportRssi(address, rssi)
         if (clients.containsKey(address)) return
         if (clients.size >= MAX_OUTGOING_LINKS) return
         val last = connectCooldown[address] ?: 0L
@@ -174,7 +175,10 @@ class MeshService : Service() {
         if (now - last < CONNECT_COOLDOWN_MS) return
         connectCooldown[address] = now
 
-        val client = GattClient(this, device, router) { addr ->
+        val client = GattClient(
+            this, device, router,
+            onRssi = { addr, rssi -> MeshRepository.reportRssi(addr, rssi) },
+        ) { addr ->
             clients.remove(addr)
             updateDirectPeerCount()
         }
@@ -189,9 +193,15 @@ class MeshService : Service() {
 
     // ---------- Entrega de paquetes ----------
 
-    private fun deliverPacket(packet: Protocol.Packet) {
+    private fun deliverPacket(packet: Protocol.Packet, fromLinkId: String?) {
         if (packet.senderId == settings.nodeId) return
         updateDirectPeerCount()
+
+        // Paquete sin saltos = el emisor está en este enlace: ya sabemos qué
+        // dirección BLE es suya y su RSSI sirve como medidor de cercanía.
+        if (fromLinkId != null && packet.ttl == Protocol.DEFAULT_TTL) {
+            MeshRepository.mapAddress(fromLinkId.substringAfter(':'), packet.senderId)
+        }
 
         val plain: ByteArray = if (packet.isEncrypted) {
             crypto.decrypt(packet.payload) ?: return  // otro código de fiesta: solo relay

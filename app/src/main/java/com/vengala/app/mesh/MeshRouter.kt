@@ -20,7 +20,7 @@ interface MeshLink {
  *   conecta: los mensajes te alcanzan aunque hayas estado fuera de rango.
  */
 class MeshRouter(
-    private val onDeliver: (Protocol.Packet) -> Unit,
+    private val onDeliver: (Protocol.Packet, fromLinkId: String?) -> Unit,
 ) {
     private val links = ConcurrentHashMap<String, MeshLink>()
 
@@ -63,7 +63,7 @@ class MeshRouter(
         MeshRepository.updateStats { it.copy(packetsSeen = it.packetsSeen + 1) }
         if (!isNew) return
 
-        onDeliver(packet)
+        onDeliver(packet, fromLinkId)
         storePacket(packet)
 
         if (packet.ttl > 0) {

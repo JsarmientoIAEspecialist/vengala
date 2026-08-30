@@ -30,6 +30,31 @@ object MeshRepository {
         _trackedPeer.value = id
     }
 
+    // ---------- Proximidad por RSSI ----------
+    // Las direcciones BLE son aleatorias: solo cuando un paquete llega directo
+    // (sin saltos) sabemos qué dirección pertenece a qué nodo.
+    private val addressToNode = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    private val _peerRssi = MutableStateFlow<Map<Long, RssiSample>>(emptyMap())
+    val peerRssi: StateFlow<Map<Long, RssiSample>> = _peerRssi
+
+    fun mapAddress(address: String, nodeId: Long) {
+        addressToNode[address] = nodeId
+    }
+
+    /** Suaviza con media móvil exponencial: el RSSI crudo salta mucho. */
+    fun reportRssi(address: String, rssi: Int) {
+        val node = addressToNode[address] ?: return
+        val now = System.currentTimeMillis()
+        _peerRssi.update { map ->
+            val old = map[node]
+            val smoothed =
+                if (old == null || now - old.timestamp > 15_000) rssi.toFloat()
+                else old.rssi * 0.7f + rssi * 0.3f
+            map + (node to RssiSample(smoothed, now))
+        }
+    }
+
     private const val MAX_MESSAGES = 500
     private const val PEER_EXPIRY_MS = 10 * 60_000L
 

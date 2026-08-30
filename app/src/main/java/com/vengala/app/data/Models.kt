@@ -26,6 +26,12 @@ data class Peer(
     val directLink: Boolean = false,
 )
 
+/** Intensidad de señal BLE suavizada hacia un peer (para el caliente/frío). */
+data class RssiSample(
+    val rssi: Float,
+    val timestamp: Long,
+)
+
 data class MyLocation(
     val latitude: Double,
     val longitude: Double,

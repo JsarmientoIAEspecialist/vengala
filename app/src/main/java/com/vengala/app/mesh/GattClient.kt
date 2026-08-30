@@ -22,8 +22,20 @@ class GattClient(
     private val context: Context,
     private val device: BluetoothDevice,
     private val router: MeshRouter,
+    private val onRssi: (address: String, rssi: Int) -> Unit = { _, _ -> },
     private val onDisconnected: (address: String) -> Unit,
 ) {
+    private val rssiHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val rssiPoller = object : Runnable {
+        override fun run() {
+            if (!ready) return
+            try {
+                gatt?.readRemoteRssi()
+            } catch (_: Exception) {
+            }
+            rssiHandler.postDelayed(this, 2_000)
+        }
+    }
     private var gatt: BluetoothGatt? = null
     private var messageChar: BluetoothGattCharacteristic? = null
     private val writeQueue = ConcurrentLinkedQueue<ByteArray>()
@@ -82,9 +94,14 @@ class GattClient(
             if (d.uuid == Protocol.CCCD_UUID && status == BluetoothGatt.GATT_SUCCESS) {
                 ready = true
                 router.addLink(ClientLink())
+                rssiHandler.post(rssiPoller)
             } else if (d.uuid == Protocol.CCCD_UUID) {
                 teardown()
             }
+        }
+
+        override fun onReadRemoteRssi(g: BluetoothGatt, rssi: Int, status: Int) {
+            if (status == BluetoothGatt.GATT_SUCCESS) onRssi(address, rssi)
         }
 
         override fun onCharacteristicWrite(
@@ -164,6 +181,7 @@ class GattClient(
 
     private fun teardown() {
         ready = false
+        rssiHandler.removeCallbacks(rssiPoller)
         router.removeLink(linkId)
         writeQueue.clear()
         writeInFlight.set(false)
