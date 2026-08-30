@@ -32,13 +32,29 @@ import com.vengala.app.ui.theme.NeonMagenta
 import org.osmdroid.config.Configuration
 import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.tileprovider.cachemanager.CacheManager
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.tileprovider.tilesource.XYTileSource
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Marker
 import java.io.File
+
+/**
+ * Mapa base oscuro de CARTO (datos © OpenStreetMap). A diferencia del servidor
+ * estándar de OSM, este permite descargar zonas para uso offline (el tile
+ * source por defecto de osmdroid PROHÍBE la descarga masiva y crashea el
+ * CacheManager). Además el mapa oscuro le va al tema nocturno de Vengala.
+ */
+private val DarkTiles = XYTileSource(
+    "CartoDark", 3, 19, 256, ".png",
+    arrayOf(
+        "https://a.basemaps.cartocdn.com/dark_all/",
+        "https://b.basemaps.cartocdn.com/dark_all/",
+        "https://c.basemaps.cartocdn.com/dark_all/",
+    ),
+    "© OpenStreetMap contributors © CARTO",
+)
 
 /**
  * Mapa del recinto (OpenStreetMap). Con internet en casa, "Descargar zona"
@@ -84,7 +100,7 @@ fun MapScreen() {
                     osmdroidTileCache = File(ctx.filesDir, "osmdroid/tiles")
                 }
                 MapView(ctx).apply {
-                    setTileSource(TileSourceFactory.MAPNIK)
+                    setTileSource(DarkTiles)
                     setMultiTouchControls(true)
                     controller.setZoom(17.0)
                     overlays.add(
@@ -159,7 +175,12 @@ fun MapScreen() {
                             me.latitude - 0.02, me.longitude - 0.02,
                         )
                         try {
-                            CacheManager(map).downloadAreaAsync(context, bb, 13, 18)
+                            CacheManager(map).downloadAreaAsync(context, bb, 13, 17)
+                            Toast.makeText(
+                                context,
+                                "Descargando mapa... no cierres la app (necesita internet)",
+                                Toast.LENGTH_LONG,
+                            ).show()
                         } catch (e: Exception) {
                             Toast.makeText(context, "No se pudo descargar: ${e.message}", Toast.LENGTH_LONG).show()
                         }
