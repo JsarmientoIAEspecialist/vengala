@@ -25,10 +25,12 @@ class CryptoBox(partyCode: String) {
         // Un código vacío (p. ej. mientras el usuario borra el campo para
         // escribir el suyo) rompería PBKDF2: usamos el código por defecto.
         val normalized = partyCode.trim().lowercase().ifBlank { "vengala" }
+        // 100k iteraciones: fuerza bruta contra códigos de fiesta débiles se
+        // vuelve 10x más cara que en v1.0.x. Siempre derivar fuera del hilo UI.
         val spec = PBEKeySpec(
             normalized.toCharArray(),
-            "vengala-mesh-v1".toByteArray(),
-            10_000,
+            "vengala-mesh-v2".toByteArray(),
+            100_000,
             256,
         )
         val keyBytes = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")

@@ -64,12 +64,14 @@ import kotlin.math.pow
  *  - Lejos: flecha con brújula guiada por GPS.
  *  - Cerca (<~20 m): caliente/frío por intensidad de señal Bluetooth directa,
  *    que a corta distancia es mucho más precisa que el GPS. Vibra al acercarte.
+ * También guía hacia el punto de encuentro (sin etapa Bluetooth: es un lugar).
  */
 @Composable
-fun TrackerScreen(peerId: Long) {
+fun TrackerScreen(target: com.vengala.app.data.TrackTarget) {
     val peers by MeshRepository.peers.collectAsState()
     val myLocation by MeshRepository.myLocation.collectAsState()
     val rssiMap by MeshRepository.peerRssi.collectAsState()
+    val meet by MeshRepository.meetPoint.collectAsState()
     val context = LocalContext.current
     var azimuth by remember { mutableFloatStateOf(0f) }
     var nowTick by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -86,14 +88,24 @@ fun TrackerScreen(peerId: Long) {
         }
     }
 
-    val peer = peers[peerId]
-    val loc = peer?.location
+    val isMeet = target is com.vengala.app.data.TrackTarget.MeetTarget
+    val peerId = (target as? com.vengala.app.data.TrackTarget.PeerTarget)?.id
+    val peer = peerId?.let { peers[it] }
+    val targetName = if (isMeet) "EL PUNTO ⚑" else (peer?.name ?: "???").uppercase()
+    val loc = if (isMeet) {
+        meet?.let {
+            com.vengala.app.data.PeerLocation(it.latitude, it.longitude, 5f, it.timestamp)
+        }
+    } else peer?.location
     val me = myLocation
+    val lost = if (isMeet) meet == null else peer == null
 
-    // Señal Bluetooth fresca (< 10 s) hacia esta persona
-    val sample = rssiMap[peerId]?.takeIf { nowTick - it.timestamp < 10_000 }
+    // Señal Bluetooth fresca (< 10 s) hacia esta persona (no aplica al punto)
+    val sample = peerId?.let { id ->
+        rssiMap[id]?.takeIf { nowTick - it.timestamp < 10_000 }
+    }
     // Distancia por RSSI con potencia autocalibrada por GPS para ESTE peer
-    val txPower = MeshRepository.txPowerFor(peerId).toDouble()
+    val txPower = peerId?.let { MeshRepository.txPowerFor(it).toDouble() } ?: -59.0
     val rssiMeters = sample?.let { 10.0.pow((txPower - it.rssi) / (10.0 * 2.2)) }
     val proximityTier = sample?.let {
         when {
@@ -145,20 +157,23 @@ fun TrackerScreen(peerId: Long) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                "BUSCANDO A ${(peer?.name ?: "???").uppercase()}",
+                "BUSCANDO $targetName",
                 style = MaterialTheme.typography.titleMedium,
                 color = NeonCyan,
             )
-            IconButton(onClick = { MeshRepository.setTrackedPeer(null) }) {
+            IconButton(onClick = { MeshRepository.setTrackedTarget(null) }) {
                 Icon(Icons.Filled.Close, contentDescription = "Cerrar",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
         when {
-            peer == null -> Message("Se perdió la señal de esta persona en el mesh.")
+            lost -> Message(
+                if (isMeet) "El punto de encuentro fue quitado."
+                else "Se perdió la señal de esta persona en el mesh.",
+            )
             loc == null && sample == null ->
-                Message("Sin ubicación GPS ni señal Bluetooth directa de ${peer.name} todavía. Acércate o espera unos segundos.")
+                Message("Sin ubicación GPS ni señal Bluetooth directa todavía. Acércate o espera unos segundos.")
             else -> {
                 // ----- Flecha (GPS) -----
                 if (me != null && peerPos != null && gpsDist != null && !arrived) {
@@ -223,6 +238,7 @@ fun TrackerScreen(peerId: Long) {
                 )
                 Text(
                     when {
+                        isMeet && meet != null -> "punto fijo marcado por ${meet!!.byName}"
                         arrived -> "señal Bluetooth al máximo · ya deberían verse"
                         nearMode -> "midiendo por señal Bluetooth directa (más precisa que el GPS aquí)"
                         me != null && loc != null ->
@@ -278,8 +294,10 @@ fun TrackerScreen(peerId: Long) {
 
                 Text(
                     when {
+                        arrived && isMeet -> "Llegaste al punto de encuentro"
                         arrived -> "¡Grita o alza la mano!"
                         nearMode -> "Camina despacio: la barra sube y el teléfono vibra al acercarte"
+                        isMeet -> "Sigue la flecha hasta el punto que marcó ${meet?.byName ?: "el parche"}"
                         else -> "Sigue la flecha; al acercarte cambia a caliente/frío por Bluetooth"
                     },
                     style = MaterialTheme.typography.bodyMedium,

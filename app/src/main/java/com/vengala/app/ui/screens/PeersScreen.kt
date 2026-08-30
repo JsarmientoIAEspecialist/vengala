@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vengala.app.data.MeshRepository
 import com.vengala.app.data.Peer
+import com.vengala.app.data.TrackTarget
 import com.vengala.app.location.Geo
 import com.vengala.app.location.estimateNow
 import com.vengala.app.ui.theme.NeonCyan
@@ -104,7 +105,9 @@ private fun PeerCard(peer: Peer, distanceMeters: Double?) {
         Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))
-            .clickable(enabled = canTrack) { MeshRepository.setTrackedPeer(peer.id) }
+            .clickable(enabled = canTrack) {
+                MeshRepository.setTrackedTarget(TrackTarget.PeerTarget(peer.id))
+            }
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

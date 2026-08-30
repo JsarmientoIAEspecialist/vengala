@@ -14,10 +14,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
+import android.widget.Toast
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -36,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.vengala.app.data.MeshRepository
 import com.vengala.app.data.Settings
 import com.vengala.app.mesh.MeshService
 import com.vengala.app.share.ApkSharer
@@ -158,6 +161,33 @@ fun SettingsScreen() {
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Spacer(Modifier.height(24.dp))
+        Text("PRIVACIDAD", style = MaterialTheme.typography.titleMedium, color = NeonCyan)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Tus mensajes viven solo en la memoria del teléfono y mueren al cerrar " +
+                "la app. Tu identidad y el código se guardan cifrados con el chip " +
+                "seguro del teléfono. El permiso de internet se usa únicamente para " +
+                "descargar mapas de OpenStreetMap antes de la fiesta: el mesh jamás " +
+                "toca internet.",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(12.dp))
+        OutlinedButton(
+            onClick = {
+                MeshRepository.wipeAll()
+                settings.wipe()
+                Toast.makeText(
+                    context,
+                    "Todo borrado. Cierra y abre la app para estrenar identidad.",
+                    Toast.LENGTH_LONG,
+                ).show()
+            },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Borrar todo (mensajes, identidad y código)")
+        }
         Spacer(Modifier.height(8.dp))
         Text(
             "ID de nodo: ${settings.nodeIdHex}",

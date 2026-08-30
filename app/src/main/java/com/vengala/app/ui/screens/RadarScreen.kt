@@ -1,5 +1,6 @@
 package com.vengala.app.ui.screens
 
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -51,8 +52,21 @@ import kotlin.math.sin
 fun RadarScreen() {
     val peers by MeshRepository.peers.collectAsState()
     val myLocation by MeshRepository.myLocation.collectAsState()
+    val meet by MeshRepository.meetPoint.collectAsState()
     val context = LocalContext.current
     var azimuth by remember { mutableFloatStateOf(0f) }
+
+    // Barrido giratorio estilo radar (puramente estético, pero se siente vivo)
+    val sweep by androidx.compose.animation.core.rememberInfiniteTransition(label = "sweep")
+        .animateFloat(
+            initialValue = 0f,
+            targetValue = 360f,
+            animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+                animation = androidx.compose.animation.core.tween(4000,
+                    easing = androidx.compose.animation.core.LinearEasing),
+            ),
+            label = "sweepAngle",
+        )
 
     DisposableEffect(Unit) {
         val compass = CompassEngine(context) { azimuth = it }
@@ -110,6 +124,18 @@ fun RadarScreen() {
                 radius = radius, center = center,
             )
 
+            // Barrido giratorio
+            val sweepAngle = Math.toRadians(sweep.toDouble() - 90.0)
+            drawLine(
+                color = NeonCyan.copy(alpha = 0.35f),
+                start = center,
+                end = Offset(
+                    center.x + radius * cos(sweepAngle).toFloat(),
+                    center.y + radius * sin(sweepAngle).toFloat(),
+                ),
+                strokeWidth = 3f,
+            )
+
             // Marcador de norte en el borde
             val northAngle = Math.toRadians((-azimuth).toDouble() - 90.0)
             val northPos = Offset(
@@ -163,6 +189,30 @@ fun RadarScreen() {
                         paint.color = android.graphics.Color.argb(255, 0, 229, 255)
                         paint.textSize = 26f
                         drawText(Geo.formatDistance(dist), pos.x, pos.y + 48f, paint)
+                    }
+                }
+
+                // Punto de encuentro: bandera lima
+                meet?.let { mp ->
+                    val dist = Geo.distanceMeters(me.latitude, me.longitude, mp.latitude, mp.longitude)
+                    val bearing = Geo.bearingDegrees(me.latitude, me.longitude, mp.latitude, mp.longitude)
+                    val norm = (ln((dist / 10.0).coerceAtLeast(1.0)) /
+                        ln(40.0)).coerceIn(0.08, 1.0).toFloat()
+                    val angle = Math.toRadians(bearing - azimuth - 90.0)
+                    val pos = Offset(
+                        center.x + radius * norm * cos(angle).toFloat(),
+                        center.y + radius * norm * sin(angle).toFloat(),
+                    )
+                    drawCircle(NeonLime, 10f, pos)
+                    drawCircle(NeonLime.copy(alpha = 0.25f), 20f, pos)
+                    drawContext.canvas.nativeCanvas.apply {
+                        val paint = android.graphics.Paint().apply {
+                            color = android.graphics.Color.argb(255, 182, 255, 0)
+                            textSize = 28f
+                            textAlign = android.graphics.Paint.Align.CENTER
+                            isAntiAlias = true
+                        }
+                        drawText("⚑ ${Geo.formatDistance(dist)}", pos.x, pos.y - 26f, paint)
                     }
                 }
             }

@@ -153,10 +153,12 @@ private fun MessageBubble(msg: ChatMessage) {
                 .padding(horizontal = 14.dp, vertical = 10.dp),
         ) {
             if (!msg.isMine) {
+                // Cada persona tiene su propio color neón, derivado de su id
+                val hue = ((msg.senderId % 360 + 360) % 360).toFloat()
                 Text(
                     msg.senderName,
                     style = MaterialTheme.typography.labelSmall,
-                    color = NeonCyan,
+                    color = androidx.compose.ui.graphics.Color.hsv(hue, 0.6f, 1f),
                 )
             }
             Text(msg.text, style = MaterialTheme.typography.bodyLarge)

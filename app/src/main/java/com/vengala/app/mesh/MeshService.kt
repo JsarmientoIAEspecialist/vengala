@@ -63,7 +63,7 @@ class MeshService : Service() {
 
     private lateinit var settings: Settings
     @Volatile
-    private lateinit var crypto: CryptoBox
+    private var crypto: CryptoBox? = null
     private lateinit var router: MeshRouter
 
     private var btManager: BluetoothManager? = null
@@ -82,8 +82,9 @@ class MeshService : Service() {
         super.onCreate()
         instance = this
         settings = Settings(this)
-        crypto = CryptoBox(settings.partyCode)
         router = MeshRouter(::deliverPacket)
+        // PBKDF2 con 100k iteraciones tarda ~medio segundo: nunca en el hilo UI.
+        scope.launch { crypto = CryptoBox(settings.partyCode) }
 
         startForeground(1, buildNotification())
 
@@ -203,8 +204,9 @@ class MeshService : Service() {
             MeshRepository.mapAddress(fromLinkId.substringAfter(':'), packet.senderId)
         }
 
+        val box = crypto ?: return  // clave aún derivándose: el relay ya ocurrió
         val plain: ByteArray = if (packet.isEncrypted) {
-            crypto.decrypt(packet.payload) ?: return  // otro código de fiesta: solo relay
+            box.decrypt(packet.payload) ?: return  // otro código de fiesta: solo relay
         } else packet.payload
 
         val json = try {
@@ -257,12 +259,27 @@ class MeshService : Service() {
                     battery = json.optInt("bat", -1).takeIf { it >= 0 },
                 )
             }
+
+            Protocol.TYPE_MEET -> {
+                if (json.optInt("rm", 0) == 1) {
+                    MeshRepository.setMeetPoint(null)
+                } else {
+                    val la = json.optDouble("la", Double.NaN)
+                    val lo = json.optDouble("lo", Double.NaN)
+                    if (!la.isNaN() && !lo.isNaN()) {
+                        MeshRepository.setMeetPoint(
+                            com.vengala.app.data.MeetPoint(la, lo, name, packet.timestamp),
+                        )
+                    }
+                }
+            }
         }
     }
 
     // ---------- Envío ----------
 
     fun sendChat(text: String) {
+        val box = crypto ?: return
         val trimmed = text.trim().take(300)
         if (trimmed.isEmpty()) return
         val payload = JSONObject()
@@ -270,7 +287,7 @@ class MeshService : Service() {
             .put("t", trimmed)
             .toString().toByteArray(Charsets.UTF_8)
         val packet = Protocol.build(
-            Protocol.TYPE_CHAT, settings.nodeId, crypto.encrypt(payload), encrypted = true,
+            Protocol.TYPE_CHAT, settings.nodeId, box.encrypt(payload), encrypted = true,
         )
         router.sendLocal(packet)
         MeshRepository.addMessage(
@@ -285,7 +302,32 @@ class MeshService : Service() {
         )
     }
 
+    /** Marca (o quita, con lat/lon NaN) el punto de encuentro y lo difunde. */
+    fun sendMeetPoint(latitude: Double, longitude: Double, remove: Boolean = false) {
+        val box = crypto ?: return
+        val json = JSONObject().put("n", settings.displayName)
+        if (remove) {
+            json.put("rm", 1)
+            MeshRepository.setMeetPoint(null)
+        } else {
+            json.put("la", latitude).put("lo", longitude)
+        }
+        val packet = Protocol.build(
+            Protocol.TYPE_MEET, settings.nodeId,
+            box.encrypt(json.toString().toByteArray(Charsets.UTF_8)), encrypted = true,
+        )
+        router.sendLocal(packet)
+        if (!remove) {
+            MeshRepository.setMeetPoint(
+                com.vengala.app.data.MeetPoint(
+                    latitude, longitude, settings.displayName, packet.timestamp,
+                ),
+            )
+        }
+    }
+
     private fun sendLocationBeacon() {
+        val box = crypto ?: return
         if (!settings.shareLocation) return
         val loc = MeshRepository.myLocation.value ?: return
         val payload = JSONObject()
@@ -299,19 +341,20 @@ class MeshService : Service() {
             .toString().toByteArray(Charsets.UTF_8)
         router.sendLocal(
             Protocol.build(
-                Protocol.TYPE_LOCATION, settings.nodeId, crypto.encrypt(payload), encrypted = true,
+                Protocol.TYPE_LOCATION, settings.nodeId, box.encrypt(payload), encrypted = true,
             ),
         )
     }
 
     private fun sendProfileBeacon() {
+        val box = crypto ?: return
         val payload = JSONObject()
             .put("n", settings.displayName)
             .put("bat", batteryPercent())
             .toString().toByteArray(Charsets.UTF_8)
         router.sendLocal(
             Protocol.build(
-                Protocol.TYPE_PROFILE, settings.nodeId, crypto.encrypt(payload), encrypted = true,
+                Protocol.TYPE_PROFILE, settings.nodeId, box.encrypt(payload), encrypted = true,
             ),
         )
     }

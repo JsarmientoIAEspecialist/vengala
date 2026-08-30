@@ -27,6 +27,7 @@ object Protocol {
     const val TYPE_CHAT: Byte = 1
     const val TYPE_LOCATION: Byte = 2
     const val TYPE_PROFILE: Byte = 3
+    const val TYPE_MEET: Byte = 4
 
     const val FLAG_ENCRYPTED: Byte = 1
 

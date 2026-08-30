@@ -44,6 +44,20 @@ data class MyLocation(
     val bearingDeg: Float = -1f,
 )
 
+/** Punto de encuentro compartido con todo el parche por el mesh. */
+data class MeetPoint(
+    val latitude: Double,
+    val longitude: Double,
+    val byName: String,
+    val timestamp: Long,
+)
+
+/** Qué está siguiendo la flecha: una persona o el punto de encuentro. */
+sealed interface TrackTarget {
+    data class PeerTarget(val id: Long) : TrackTarget
+    data object MeetTarget : TrackTarget
+}
+
 data class MeshStats(
     val running: Boolean = false,
     val directPeers: Int = 0,

@@ -22,12 +22,32 @@ object MeshRepository {
     private val _stats = MutableStateFlow(MeshStats())
     val stats: StateFlow<MeshStats> = _stats
 
-    /** Peer que el usuario está siguiendo con la flecha (null = ninguno). */
-    private val _trackedPeer = MutableStateFlow<Long?>(null)
-    val trackedPeer: StateFlow<Long?> = _trackedPeer
+    /** Objetivo que sigue la flecha: persona o punto de encuentro (null = ninguno). */
+    private val _trackedTarget = MutableStateFlow<TrackTarget?>(null)
+    val trackedTarget: StateFlow<TrackTarget?> = _trackedTarget
 
-    fun setTrackedPeer(id: Long?) {
-        _trackedPeer.value = id
+    fun setTrackedTarget(target: TrackTarget?) {
+        _trackedTarget.value = target
+    }
+
+    /** Punto de encuentro vigente (gana el más reciente que llegue por el mesh). */
+    private val _meetPoint = MutableStateFlow<MeetPoint?>(null)
+    val meetPoint: StateFlow<MeetPoint?> = _meetPoint
+
+    fun setMeetPoint(mp: MeetPoint?) {
+        val current = _meetPoint.value
+        if (mp == null || current == null || mp.timestamp >= current.timestamp) {
+            _meetPoint.value = mp
+        }
+    }
+
+    /** Borrado total en memoria (botón de pánico / privacidad). */
+    fun wipeAll() {
+        _messages.value = emptyList()
+        _peers.value = emptyMap()
+        _meetPoint.value = null
+        _trackedTarget.value = null
+        _peerRssi.value = emptyMap()
     }
 
     // ---------- Proximidad por RSSI ----------

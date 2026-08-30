@@ -12,8 +12,8 @@ android {
         applicationId = "com.vengala.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
-        versionName = "1.0.5"
+        versionCode = 7
+        versionName = "1.1.0"
     }
 
     buildTypes {
@@ -52,4 +52,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.navigation:navigation-compose:2.8.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    // Mapas offline (OpenStreetMap) y almacenamiento cifrado
+    implementation("org.osmdroid:osmdroid-android:6.1.20")
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 }
