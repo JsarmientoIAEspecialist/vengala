@@ -47,7 +47,12 @@ class GattClient(
 
         override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
             when (newState) {
-                BluetoothProfile.STATE_CONNECTED -> g.requestMtu(517)
+                BluetoothProfile.STATE_CONNECTED -> {
+                    // Si el stack no acepta la petición de MTU, seguimos igual:
+                    // onMtuChanged nunca llegaría y la conexión quedaría muerta.
+                    val requested = try { g.requestMtu(517) } catch (_: Exception) { false }
+                    if (!requested) g.discoverServices()
+                }
                 BluetoothProfile.STATE_DISCONNECTED -> teardown()
             }
         }
@@ -141,6 +146,14 @@ class GattClient(
     fun connect() {
         try {
             gatt = device.connectGatt(context, false, callback, BluetoothDevice.TRANSPORT_LE)
+            // Si en 20 s no llegamos a "ready" (suscripción de notify hecha),
+            // la conexión se atascó en algún paso: se libera para reintentar.
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                if (!ready && gatt != null) {
+                    Log.w("Vengala", "Conexión a $address atascada; se reinicia")
+                    teardown()
+                }
+            }, 20_000)
         } catch (e: Exception) {
             Log.w("Vengala", "connectGatt falló", e)
             teardown()

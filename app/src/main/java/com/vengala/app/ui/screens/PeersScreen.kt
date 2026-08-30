@@ -44,6 +44,14 @@ fun PeersScreen() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
             )
+            DiagnosticsCard(
+                bluetoothOn = stats.bluetoothOn,
+                locationOn = stats.locationServiceOn,
+                advertise = stats.advertiseState,
+                scan = stats.scanState,
+                devicesFound = stats.devicesFound,
+                linksReady = stats.directPeers,
+            )
         }
 
         if (peers.isEmpty()) {
@@ -124,4 +132,63 @@ private fun formatAgo(seconds: Long): String = when {
     seconds < 60 -> "$seconds s"
     seconds < 3600 -> "${seconds / 60} min"
     else -> "${seconds / 3600} h"
+}
+
+/** Estado del descubrimiento BLE, para saber en qué etapa se atora. */
+@Composable
+private fun DiagnosticsCard(
+    bluetoothOn: Boolean,
+    locationOn: Boolean,
+    advertise: String,
+    scan: String,
+    devicesFound: Int,
+    linksReady: Int,
+) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(top = 12.dp)
+            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(16.dp))
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text("DIAGNÓSTICO", style = MaterialTheme.typography.labelSmall, color = NeonLime)
+        DiagRow("Bluetooth", if (bluetoothOn) "activo" else "APAGADO — enciéndelo", bluetoothOn)
+        DiagRow(
+            "Ubicación del sistema",
+            if (locationOn) "activa" else "APAGADA — actívala (el scan BLE la necesita)",
+            locationOn,
+        )
+        DiagRow("Anunciarme por BLE", advertise, advertise == "ok")
+        DiagRow("Escanear BLE", scan, scan == "ok")
+        DiagRow(
+            "Teléfonos Vengala detectados", "$devicesFound",
+            devicesFound > 0,
+        )
+        DiagRow("Enlaces conectados", "$linksReady", linksReady > 0)
+        if (devicesFound == 0 && advertise == "ok" && scan == "ok") {
+            Text(
+                "Escaneando bien pero sin detectar a nadie: verifica que el otro teléfono " +
+                    "tenga Vengala ABIERTA, Bluetooth encendido y su diagnóstico en verde.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DiagRow(label: String, value: String, ok: Boolean) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (ok) NeonLime else MaterialTheme.colorScheme.error,
+        )
+    }
 }

@@ -66,6 +66,7 @@ class MeshService : Service() {
     private lateinit var crypto: CryptoBox
     private lateinit var router: MeshRouter
 
+    private var btManager: BluetoothManager? = null
     private var advertiser: BleAdvertiser? = null
     private var scanner: BleScanner? = null
     private var gattServer: GattServer? = null
@@ -73,6 +74,7 @@ class MeshService : Service() {
 
     private val clients = ConcurrentHashMap<String, GattClient>()
     private val connectCooldown = ConcurrentHashMap<String, Long>()
+    private val seenAddresses = ConcurrentHashMap.newKeySet<String>()
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -85,13 +87,8 @@ class MeshService : Service() {
 
         startForeground(1, buildNotification())
 
-        val btManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        val adapter = btManager.adapter
-        if (adapter != null && adapter.isEnabled) {
-            gattServer = GattServer(this, btManager, router).also { it.start() }
-            advertiser = BleAdvertiser(adapter).also { it.start() }
-            scanner = BleScanner(adapter, ::onNodeDiscovered).also { it.start() }
-        }
+        btManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        startBleIfPossible()
 
         locationEngine = LocationEngine(this) { loc ->
             MeshRepository.setMyLocation(loc)
@@ -99,6 +96,52 @@ class MeshService : Service() {
 
         MeshRepository.updateStats { it.copy(running = true) }
         startBeacons()
+        startWatchdog()
+    }
+
+    /** Arranca (o re-arranca) las piezas BLE; inofensivo si ya corren. */
+    private fun startBleIfPossible() {
+        val manager = btManager ?: return
+        val adapter = manager.adapter
+        val btOn = adapter != null && adapter.isEnabled
+        MeshRepository.updateStats { it.copy(bluetoothOn = btOn) }
+        if (!btOn) {
+            MeshRepository.updateStats {
+                it.copy(advertiseState = "Bluetooth apagado", scanState = "Bluetooth apagado")
+            }
+            return
+        }
+        if (gattServer == null) {
+            gattServer = GattServer(this, manager, router).also { it.start() }
+        }
+        if (advertiser == null) advertiser = BleAdvertiser(adapter)
+        if (scanner == null) scanner = BleScanner(adapter, ::onNodeDiscovered)
+        if (advertiser?.running != true) advertiser?.start()
+        if (scanner?.running != true) scanner?.start()
+    }
+
+    /**
+     * Cada 20 s revisa que el descubrimiento siga vivo: Bluetooth encendido
+     * tarde, scan muerto por throttling o advertising caído se recuperan solos.
+     */
+    private fun startWatchdog() {
+        scope.launch {
+            while (true) {
+                delay(20_000)
+                try {
+                    startBleIfPossible()
+                    val lm = getSystemService(Context.LOCATION_SERVICE)
+                        as android.location.LocationManager
+                    val locOn = try {
+                        lm.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER) ||
+                            lm.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER)
+                    } catch (_: Exception) { true }
+                    MeshRepository.updateStats { it.copy(locationServiceOn = locOn) }
+                } catch (e: Exception) {
+                    android.util.Log.w("Vengala", "Watchdog", e)
+                }
+            }
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
@@ -121,6 +164,9 @@ class MeshService : Service() {
 
     private fun onNodeDiscovered(device: BluetoothDevice, rssi: Int) {
         val address = device.address
+        if (seenAddresses.add(address)) {
+            MeshRepository.updateStats { it.copy(devicesFound = seenAddresses.size) }
+        }
         if (clients.containsKey(address)) return
         if (clients.size >= MAX_OUTGOING_LINKS) return
         val last = connectCooldown[address] ?: 0L

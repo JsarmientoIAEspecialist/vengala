@@ -37,4 +37,10 @@ data class MeshStats(
     val directPeers: Int = 0,
     val packetsRelayed: Long = 0,
     val packetsSeen: Long = 0,
+    // Diagnóstico del descubrimiento BLE
+    val bluetoothOn: Boolean = false,
+    val locationServiceOn: Boolean = true,
+    val advertiseState: String = "iniciando...",
+    val scanState: String = "iniciando...",
+    val devicesFound: Int = 0,
 )
