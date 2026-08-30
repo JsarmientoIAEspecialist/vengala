@@ -12,3 +12,6 @@ local.properties
 
 .remember/
 local.properties
+
+keystore/
+keystore.properties

@@ -130,25 +130,29 @@ fun SettingsScreen() {
             )
         }
 
-        Spacer(Modifier.height(24.dp))
-        Text("PASA LA VOZ", style = MaterialTheme.typography.titleMedium, color = NeonCyan)
-        Spacer(Modifier.height(8.dp))
-        Text(
-            "¿Tu parche no tiene la app? Mándasela por Bluetooth aquí mismo, " +
-                "sin internet ni Play Store. Al recibirla deben permitir " +
-                "\"instalar apps desconocidas\".",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(12.dp))
-        Button(
-            onClick = { ApkSharer.shareApk(context) },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(containerColor = NeonMagenta),
-        ) {
-            Icon(Icons.Filled.Bluetooth, contentDescription = null)
-            Spacer(Modifier.padding(4.dp))
-            Text("Compartir la app por Bluetooth")
+        // La variante de Play Store no incluye el botón de compartir el APK
+        // (política de Google); la variante libre de GitHub sí.
+        if (com.vengala.app.BuildConfig.FLAVOR != "play") {
+            Spacer(Modifier.height(24.dp))
+            Text("PASA LA VOZ", style = MaterialTheme.typography.titleMedium, color = NeonCyan)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "¿Tu parche no tiene la app? Mándasela por Bluetooth aquí mismo, " +
+                    "sin internet ni Play Store. Al recibirla deben permitir " +
+                    "\"instalar apps desconocidas\".",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(12.dp))
+            Button(
+                onClick = { ApkSharer.shareApk(context) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = NeonMagenta),
+            ) {
+                Icon(Icons.Filled.Bluetooth, contentDescription = null)
+                Spacer(Modifier.padding(4.dp))
+                Text("Compartir la app por Bluetooth")
+            }
         }
 
         Spacer(Modifier.height(24.dp))

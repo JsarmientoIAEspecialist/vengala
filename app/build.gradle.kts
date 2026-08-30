@@ -1,7 +1,15 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+}
+
+// Credenciales de firma (keystore.properties NO se sube a git)
+val keystoreProps = Properties().apply {
+    val f = rootProject.file("keystore.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
 }
 
 android {
@@ -12,18 +20,40 @@ android {
         applicationId = "com.vengala.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 11
-        versionName = "1.1.4"
+        versionCode = 12
+        versionName = "1.2.0"
+    }
+
+    signingConfigs {
+        create("release") {
+            if (keystoreProps.isNotEmpty()) {
+                storeFile = rootProject.file(keystoreProps["storeFile"] as String)
+                storePassword = keystoreProps["storePassword"] as String
+                keyAlias = keystoreProps["keyAlias"] as String
+                keyPassword = keystoreProps["keyPassword"] as String
+            }
+        }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+            // Sin minificar: fiabilidad primero (osmdroid/Tink usan reflexión)
+            isMinifyEnabled = false
+            isShrinkResources = false
+            signingConfig = signingConfigs.getByName("release")
+        }
+    }
+
+    // "libre": la versión de GitHub, con el botón de compartir el APK.
+    // "play": la de Play Store, sin ese botón (política de Google).
+    flavorDimensions += "dist"
+    productFlavors {
+        create("libre") {
+            dimension = "dist"
+            isDefault = true
+        }
+        create("play") {
+            dimension = "dist"
         }
     }
     compileOptions {
@@ -35,6 +65,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Política de Privacidad — Vengala</title>
+<style>
+  body { margin:0; background:#0A0A12; color:#F2F0F7; font-family:system-ui,sans-serif; line-height:1.7; }
+  main { max-width:720px; margin:0 auto; padding:48px 24px 80px; }
+  h1 { color:#FF2E88; font-size:2rem; }
+  h2 { color:#00E5FF; font-size:1.2rem; margin-top:2.2em; }
+  a { color:#00E5FF; }
+  .fecha { color:#8A8798; font-size:.9rem; }
+  .destacado { border-left:3px solid #B6FF00; padding:12px 18px; background:#15151F; border-radius:0 12px 12px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Política de Privacidad de Vengala</h1>
+  <p class="fecha">Última actualización: 30 de agosto de 2026</p>
+
+  <p class="destacado"><strong>Resumen en una frase:</strong> Vengala no tiene servidores,
+  no crea cuentas y no envía tus datos a internet. Todo lo que haces en la app
+  ocurre entre tu teléfono y los teléfonos de tu grupo, cifrado.</p>
+
+  <h2>Qué datos maneja la app</h2>
+  <ul>
+    <li><strong>Nombre visible y código de fiesta:</strong> los escribes tú, se guardan
+    cifrados en tu teléfono (Android Keystore) y nunca salen a internet.</li>
+    <li><strong>Identificador de nodo:</strong> un número aleatorio generado en tu
+    dispositivo. No deriva de tu identidad, hardware, SIM ni cuentas.</li>
+    <li><strong>Ubicación (GPS):</strong> se usa para mostrarte en el radar y el mapa de tu
+    grupo. Viaja únicamente por Bluetooth, cifrada con AES-256-GCM, y solo pueden leerla
+    quienes tienen tu mismo código de fiesta. Puedes desactivar compartirla en Ajustes.
+    Jamás se envía a servidores: no existen servidores.</li>
+    <li><strong>Mensajes de chat:</strong> viajan cifrados por Bluetooth entre los
+    teléfonos del grupo, viven solo en la memoria del teléfono y se pierden al cerrar
+    la app. No se almacenan en ningún otro lugar.</li>
+  </ul>
+
+  <h2>Qué NO hace Vengala</h2>
+  <ul>
+    <li>No recolecta, vende ni comparte datos personales con nadie.</li>
+    <li>No usa analíticas, publicidad ni rastreadores de ningún tipo.</li>
+    <li>No requiere cuenta, correo, ni número de teléfono.</li>
+    <li>No envía tu ubicación, mensajes ni identidad a internet.</li>
+  </ul>
+
+  <h2>Uso de internet</h2>
+  <p>El único uso de red de la app es descargar mosaicos de mapa de
+  OpenStreetMap cuando tú tocas «Descargar esta zona» (o navegas el mapa con
+  conexión). Esa petición va al servidor de OpenStreetMap y contiene solo las
+  coordenadas de los mosaicos, como cualquier visor de mapas. El sistema de
+  chat y ubicación del grupo nunca usa internet.</p>
+
+  <h2>Permisos que pide la app y por qué</h2>
+  <ul>
+    <li><strong>Bluetooth (buscar, anunciar, conectar):</strong> es la red del grupo:
+    los teléfonos se descubren y comunican directamente entre sí.</li>
+    <li><strong>Ubicación precisa:</strong> para el radar, el mapa y la flecha. En
+    Android 11 o inferior, el sistema además la exige para escanear Bluetooth LE.</li>
+    <li><strong>Notificaciones:</strong> para la notificación fija que mantiene viva la
+    red mientras usas otras apps.</li>
+    <li><strong>Vibración:</strong> para avisarte físicamente cuando llegas a tu objetivo.</li>
+  </ul>
+
+  <h2>Cifrado</h2>
+  <p>Todo el tráfico del grupo se cifra con AES-256-GCM, con clave derivada del
+  código de fiesta mediante PBKDF2-HMAC-SHA256 (100.000 iteraciones). Quien no
+  conoce el código no puede leer el contenido, aunque capture el tráfico de radio.</p>
+
+  <h2>Menores de edad</h2>
+  <p>Vengala no recolecta datos de ningún usuario, incluidos menores. Está
+  pensada para asistentes a festivales y eventos.</p>
+
+  <h2>Eliminación de datos</h2>
+  <p>Todos los datos existen únicamente en tu dispositivo. Puedes borrarlos con
+  el botón «Borrar todo» en Ajustes, o desinstalando la app. No hay nada que
+  borrar en ningún servidor, porque nada sale de tu teléfono.</p>
+
+  <h2>Contacto</h2>
+  <p>Preguntas sobre esta política:
+  <a href="https://github.com/JsarmientoIAEspecialist/vengala/issues">github.com/JsarmientoIAEspecialist/vengala/issues</a>
+  o al correo juan.sebastian.sarmiento.a@gmail.com.</p>
+
+  <h2>Cambios a esta política</h2>
+  <p>Si la app cambiara su manejo de datos, esta página se actualizará y el
+  cambio quedará registrado en el historial público del
+  <a href="https://github.com/JsarmientoIAEspecialist/vengala">repositorio</a>.</p>
+</main>
+</body>
+</html>
