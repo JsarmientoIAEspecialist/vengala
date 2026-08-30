@@ -62,6 +62,7 @@ class MeshService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private lateinit var settings: Settings
+    @Volatile
     private lateinit var crypto: CryptoBox
     private lateinit var router: MeshRouter
 
@@ -262,8 +263,15 @@ class MeshService : Service() {
 
     /** Llamar cuando cambian nombre o código de fiesta en Ajustes. */
     fun onSettingsChanged() {
-        crypto = CryptoBox(settings.partyCode)
-        scope.launch { sendProfileBeacon() }
+        // PBKDF2 (10k iteraciones) es costoso: siempre fuera del hilo de UI.
+        scope.launch {
+            try {
+                crypto = CryptoBox(settings.partyCode)
+                sendProfileBeacon()
+            } catch (e: Exception) {
+                android.util.Log.w("Vengala", "No se pudo aplicar ajustes", e)
+            }
+        }
     }
 
     private fun startBeacons() {

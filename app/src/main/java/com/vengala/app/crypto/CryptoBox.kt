@@ -22,8 +22,11 @@ class CryptoBox(partyCode: String) {
     private val random = SecureRandom()
 
     init {
+        // Un código vacío (p. ej. mientras el usuario borra el campo para
+        // escribir el suyo) rompería PBKDF2: usamos el código por defecto.
+        val normalized = partyCode.trim().lowercase().ifBlank { "vengala" }
         val spec = PBEKeySpec(
-            partyCode.trim().lowercase().toCharArray(),
+            normalized.toCharArray(),
             "vengala-mesh-v1".toByteArray(),
             10_000,
             256,

@@ -23,10 +23,15 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.drop
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -46,6 +51,17 @@ fun SettingsScreen() {
     var partyCode by remember { mutableStateOf(settings.partyCode) }
     var shareLocation by remember { mutableStateOf(settings.shareLocation) }
 
+    // Aplica nombre/código al mesh solo cuando el usuario deja de escribir
+    // (recalcular la clave de cifrado por cada tecla congelaba la app).
+    LaunchedEffect(Unit) {
+        snapshotFlow { name to partyCode }
+            .drop(1)
+            .collectLatest {
+                delay(600)
+                MeshService.instance?.onSettingsChanged()
+            }
+    }
+
     Column(
         Modifier
             .fillMaxSize()
@@ -60,7 +76,6 @@ fun SettingsScreen() {
             onValueChange = {
                 name = it
                 settings.displayName = it
-                MeshService.instance?.onSettingsChanged()
             },
             label = { Text("Tu nombre en la fiesta") },
             singleLine = true,
@@ -73,7 +88,6 @@ fun SettingsScreen() {
             onValueChange = {
                 partyCode = it
                 settings.partyCode = it
-                MeshService.instance?.onSettingsChanged()
             },
             label = { Text("Código de fiesta") },
             supportingText = {
