@@ -147,6 +147,31 @@ fun TrackerScreen(target: com.vengala.app.data.TrackTarget) {
     val nearMode = sample != null && (proximityTier!! <= 2 || gpsDist == null || gpsDist < 25.0)
     val arrived = (proximityTier == 0) || (gpsDist != null && gpsDist < 10.0)
 
+    // Vibración CONTINUA mientras estás encima: aunque el teléfono esté en el
+    // bolsillo, se siente que ya llegaste. Se corta al alejarte o al salir.
+    LaunchedEffect(arrived) {
+        val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        try {
+            if (arrived && Build.VERSION.SDK_INT >= 26) {
+                // pulso 300 ms + pausa 200 ms, repitiendo sin fin
+                vibrator.vibrate(
+                    VibrationEffect.createWaveform(longArrayOf(0, 300, 200), 0),
+                )
+            } else {
+                vibrator.cancel()
+            }
+        } catch (_: Exception) {
+        }
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            try {
+                (context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator).cancel()
+            } catch (_: Exception) {
+            }
+        }
+    }
+
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
