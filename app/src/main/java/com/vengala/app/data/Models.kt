@@ -14,6 +14,10 @@ data class PeerLocation(
     val longitude: Double,
     val accuracyMeters: Float,
     val timestamp: Long,
+    /** m/s reportados por su GPS (0 si quieto o desconocido). */
+    val speedMps: Float = 0f,
+    /** Rumbo de movimiento en grados (< 0 = desconocido). */
+    val bearingDeg: Float = -1f,
 )
 
 data class Peer(
@@ -36,6 +40,8 @@ data class MyLocation(
     val latitude: Double,
     val longitude: Double,
     val accuracyMeters: Float,
+    val speedMps: Float = 0f,
+    val bearingDeg: Float = -1f,
 )
 
 data class MeshStats(

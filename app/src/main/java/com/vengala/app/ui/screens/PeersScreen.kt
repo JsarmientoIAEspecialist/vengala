@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import com.vengala.app.data.MeshRepository
 import com.vengala.app.data.Peer
 import com.vengala.app.location.Geo
+import com.vengala.app.location.estimateNow
 import com.vengala.app.ui.theme.NeonCyan
 import com.vengala.app.ui.theme.NeonLime
 
@@ -83,8 +84,8 @@ fun PeersScreen() {
                 ) { peer ->
                     PeerCard(peer, myLocation?.let { me ->
                         peer.location?.let { loc ->
-                            Geo.distanceMeters(me.latitude, me.longitude,
-                                loc.latitude, loc.longitude)
+                            val (pLat, pLon) = loc.estimateNow()
+                            Geo.distanceMeters(me.latitude, me.longitude, pLat, pLon)
                         }
                     })
                 }

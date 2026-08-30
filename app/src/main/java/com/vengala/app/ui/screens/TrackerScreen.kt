@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.sp
 import com.vengala.app.data.MeshRepository
 import com.vengala.app.location.CompassEngine
 import com.vengala.app.location.Geo
+import com.vengala.app.location.estimateNow
 import com.vengala.app.ui.theme.NeonCyan
 import com.vengala.app.ui.theme.NeonLime
 import com.vengala.app.ui.theme.NeonMagenta
@@ -91,8 +92,9 @@ fun TrackerScreen(peerId: Long) {
 
     // Señal Bluetooth fresca (< 10 s) hacia esta persona
     val sample = rssiMap[peerId]?.takeIf { nowTick - it.timestamp < 10_000 }
-    // Distancia estimada por RSSI: modelo log-distancia (txPower -59 dBm @ 1 m)
-    val rssiMeters = sample?.let { 10.0.pow((-59.0 - it.rssi) / (10.0 * 2.2)) }
+    // Distancia por RSSI con potencia autocalibrada por GPS para ESTE peer
+    val txPower = MeshRepository.txPowerFor(peerId).toDouble()
+    val rssiMeters = sample?.let { 10.0.pow((txPower - it.rssi) / (10.0 * 2.2)) }
     val proximityTier = sample?.let {
         when {
             it.rssi >= -55f -> 0   // MUY CERCA  (~<3 m)
@@ -123,8 +125,10 @@ fun TrackerScreen(peerId: Long) {
         lastTier = tier
     }
 
-    val gpsDist = if (me != null && loc != null) {
-        Geo.distanceMeters(me.latitude, me.longitude, loc.latitude, loc.longitude)
+    // Posición extrapolada: si venía caminando, proyectamos su rumbo/velocidad
+    val peerPos = loc?.estimateNow(nowTick)
+    val gpsDist = if (me != null && peerPos != null) {
+        Geo.distanceMeters(me.latitude, me.longitude, peerPos.first, peerPos.second)
     } else null
 
     // Modo cercano: la señal BT manda cuando existe y ya estamos a tiro
@@ -157,8 +161,8 @@ fun TrackerScreen(peerId: Long) {
                 Message("Sin ubicación GPS ni señal Bluetooth directa de ${peer.name} todavía. Acércate o espera unos segundos.")
             else -> {
                 // ----- Flecha (GPS) -----
-                if (me != null && loc != null && gpsDist != null && !arrived) {
-                    val bearing = Geo.bearingDegrees(me.latitude, me.longitude, loc.latitude, loc.longitude)
+                if (me != null && peerPos != null && gpsDist != null && !arrived) {
+                    val bearing = Geo.bearingDegrees(me.latitude, me.longitude, peerPos.first, peerPos.second)
                     var diff = (bearing - azimuth).toFloat() % 360f
                     if (diff > 180f) diff -= 360f
                     if (diff < -180f) diff += 360f

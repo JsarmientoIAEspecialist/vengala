@@ -42,6 +42,27 @@ object MeshRepository {
         addressToNode[address] = nodeId
     }
 
+    // Potencia de transmisión aprendida por peer (dBm a 1 m). Cada modelo de
+    // teléfono emite distinto; el GPS a media distancia sirve de regla para
+    // calibrar y que el "~X m" del termómetro sea consistente entre ESTOS dos
+    // teléfonos concretos.
+    private val txPowerByPeer = java.util.concurrent.ConcurrentHashMap<Long, Float>()
+
+    fun txPowerFor(peerId: Long): Float = txPowerByPeer[peerId] ?: -59f
+
+    fun calibrateTxPower(peerId: Long, gpsDistanceMeters: Double, combinedAccuracyMeters: Float) {
+        val sample = _peerRssi.value[peerId] ?: return
+        if (System.currentTimeMillis() - sample.timestamp > 8_000) return
+        // Solo calibra donde el GPS todavía es confiable como regla:
+        // ni tan cerca (error GPS domina) ni tan lejos (RSSI ya no llega).
+        if (gpsDistanceMeters < 8.0 || gpsDistanceMeters > 40.0) return
+        if (combinedAccuracyMeters > 25f) return
+        val implied = sample.rssi +
+            (10f * 2.2f * kotlin.math.log10(gpsDistanceMeters)).toFloat()
+        val old = txPowerByPeer[peerId]
+        txPowerByPeer[peerId] = if (old == null) implied else old * 0.85f + implied * 0.15f
+    }
+
     /** Suaviza con media móvil exponencial: el RSSI crudo salta mucho. */
     fun reportRssi(address: String, rssi: Int) {
         val node = addressToNode[address] ?: return

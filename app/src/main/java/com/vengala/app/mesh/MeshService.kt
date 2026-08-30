@@ -243,6 +243,8 @@ class MeshService : Service() {
                         longitude = lo,
                         accuracyMeters = json.optDouble("ac", 0.0).toFloat(),
                         timestamp = packet.timestamp,
+                        speedMps = json.optDouble("sp", 0.0).toFloat(),
+                        bearingDeg = json.optDouble("br", -1.0).toFloat(),
                     ),
                     battery = json.optInt("bat", -1).takeIf { it >= 0 },
                 )
@@ -291,6 +293,8 @@ class MeshService : Service() {
             .put("la", loc.latitude)
             .put("lo", loc.longitude)
             .put("ac", loc.accuracyMeters.toDouble())
+            .put("sp", loc.speedMps.toDouble())
+            .put("br", loc.bearingDeg.toDouble())
             .put("bat", batteryPercent())
             .toString().toByteArray(Charsets.UTF_8)
         router.sendLocal(
@@ -330,11 +334,30 @@ class MeshService : Service() {
         }
     }
 
+    /** Compara la distancia GPS con el RSSI para calibrar la potencia por peer. */
+    private fun calibrateRssi() {
+        val me = MeshRepository.myLocation.value ?: return
+        val now = System.currentTimeMillis()
+        for (peer in MeshRepository.peers.value.values) {
+            val loc = peer.location ?: continue
+            if (now - loc.timestamp > 30_000) continue
+            val d = com.vengala.app.location.Geo.distanceMeters(
+                me.latitude, me.longitude, loc.latitude, loc.longitude,
+            )
+            MeshRepository.calibrateTxPower(
+                peer.id, d, me.accuracyMeters + loc.accuracyMeters,
+            )
+        }
+    }
+
     private fun startBeacons() {
         scope.launch {
             while (true) {
                 sendLocationBeacon()
-                delay(LOCATION_BEACON_MS)
+                calibrateRssi()
+                // Caminando la posición caduca rápido: difunde más seguido.
+                val moving = (MeshRepository.myLocation.value?.speedMps ?: 0f) > 0.7f
+                delay(if (moving) 6_000 else LOCATION_BEACON_MS)
             }
         }
         scope.launch {

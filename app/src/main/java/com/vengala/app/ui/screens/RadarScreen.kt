@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import com.vengala.app.data.MeshRepository
 import com.vengala.app.location.CompassEngine
 import com.vengala.app.location.Geo
+import com.vengala.app.location.estimateNow
 import com.vengala.app.ui.theme.NeonCyan
 import com.vengala.app.ui.theme.NeonLime
 import com.vengala.app.ui.theme.NeonMagenta
@@ -134,11 +135,12 @@ fun RadarScreen() {
             if (me != null) {
                 for (peer in located) {
                     val loc = peer.location ?: continue
+                    val (pLat, pLon) = loc.estimateNow()
                     val dist = Geo.distanceMeters(
-                        me.latitude, me.longitude, loc.latitude, loc.longitude,
+                        me.latitude, me.longitude, pLat, pLon,
                     )
                     val bearing = Geo.bearingDegrees(
-                        me.latitude, me.longitude, loc.latitude, loc.longitude,
+                        me.latitude, me.longitude, pLat, pLon,
                     )
                     // Escala log: 10m→0.2R, 25m→0.33R, 100m→0.66R, 400m+→borde
                     val norm = (ln((dist / 10.0).coerceAtLeast(1.0)) /

@@ -41,6 +41,8 @@ class LocationEngine(
                     latitude = location.latitude,
                     longitude = location.longitude,
                     accuracyMeters = location.accuracy,
+                    speedMps = if (location.hasSpeed()) location.speed else 0f,
+                    bearingDeg = if (location.hasBearing()) location.bearing else -1f,
                 ),
             )
         }

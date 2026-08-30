@@ -1,5 +1,7 @@
 package com.vengala.app.location
 
+import com.vengala.app.data.PeerLocation
+import kotlin.math.asin
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -33,4 +35,32 @@ object Geo {
         meters < 1000 -> "${meters.toInt()} m"
         else -> String.format("%.1f km", meters / 1000)
     }
+
+    /** Punto a `meters` metros del origen siguiendo un rumbo (fórmula directa). */
+    fun project(lat: Double, lon: Double, bearingDeg: Double, meters: Double): Pair<Double, Double> {
+        val dR = meters / EARTH_RADIUS_M
+        val br = Math.toRadians(bearingDeg)
+        val phi1 = Math.toRadians(lat)
+        val lambda1 = Math.toRadians(lon)
+        val phi2 = asin(sin(phi1) * cos(dR) + cos(phi1) * sin(dR) * cos(br))
+        val lambda2 = lambda1 + atan2(
+            sin(br) * sin(dR) * cos(phi1),
+            cos(dR) - sin(phi1) * sin(phi2),
+        )
+        return Math.toDegrees(phi2) to Math.toDegrees(lambda2)
+    }
+}
+
+/**
+ * Posición estimada AHORA: si la persona venía caminando, proyecta su último
+ * fix por su rumbo y velocidad en vez de mostrar dónde estaba hace N segundos.
+ * Tope de 40 m y 30 s para no inventar de más.
+ */
+fun PeerLocation.estimateNow(nowMs: Long = System.currentTimeMillis()): Pair<Double, Double> {
+    val ageSec = (nowMs - timestamp) / 1000.0
+    if (speedMps < 0.5f || bearingDeg < 0f || ageSec <= 0.0 || ageSec > 30.0) {
+        return latitude to longitude
+    }
+    val meters = (speedMps * ageSec).coerceAtMost(40.0)
+    return Geo.project(latitude, longitude, bearingDeg.toDouble(), meters)
 }
