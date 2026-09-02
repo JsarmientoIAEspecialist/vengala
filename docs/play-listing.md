@@ -1,11 +1,11 @@
-# Ficha de Play Store — Vengala
+# Ficha de Play Store — Bengala
 
 Textos listos para copiar y pegar en Play Console → Presencia en la tienda.
 
 ## Nombre de la app (máx. 30 caracteres)
 
 ```
-Vengala — mesh para festivales
+Bengala — mesh para festivales
 ```
 
 ## Descripción breve (máx. 80 caracteres)
@@ -17,9 +17,9 @@ Chat y radar de amigos sin internet. Mesh Bluetooth para festivales y raves.
 ## Descripción completa (máx. 4000 caracteres)
 
 ```
-¿La señal murió en pleno festival? Vengala no la necesita.
+¿La señal murió en pleno festival? Bengala no la necesita.
 
-Vengala conecta los teléfonos de tu grupo directamente entre sí por Bluetooth,
+Bengala conecta los teléfonos de tu grupo directamente entre sí por Bluetooth,
 formando una red mesh privada: los mensajes y ubicaciones saltan de teléfono
 en teléfono hasta llegar a tu parche, sin internet, sin señal celular y sin
 servidores.
@@ -55,14 +55,14 @@ todo el grupo por la red mesh, con flecha para llegar.
 • Botón "Borrar todo" que elimina mensajes, identidad y código al instante.
 
 CÓMO SE USA
-1. Todos instalan Vengala.
+1. Todos instalan Bengala.
 2. Todos escriben el mismo código de fiesta en Ajustes.
 3. Listo: a menos de ~30 metros los teléfonos se encuentran solos, y cada
    persona extiende el alcance de toda la red.
 
 Hecha para raves, festivales, conciertos, campamentos, marchas y cualquier
 lugar donde la red celular colapsa. Código abierto:
-github.com/JsarmientoIAEspecialist/vengala
+github.com/JsarmientoIAEspecialist/bengala
 ```
 
 ## Otras respuestas para Play Console
@@ -70,7 +70,7 @@ github.com/JsarmientoIAEspecialist/vengala
 - **Categoría**: Comunicación
 - **Etiquetas**: comunicación offline, mapas y navegación
 - **Correo de contacto**: juan.sebastian.sarmiento.a@gmail.com
-- **Política de privacidad (URL)**: https://jsarmientoiaespecialist.github.io/vengala/
+- **Política de privacidad (URL)**: https://jsarmientoiaespecialist.github.io/bengala/
 
 ### Data Safety (Seguridad de los datos)
 

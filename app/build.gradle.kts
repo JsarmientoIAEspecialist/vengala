@@ -13,15 +13,15 @@ val keystoreProps = Properties().apply {
 }
 
 android {
-    namespace = "com.vengala.app"
+    namespace = "com.bengala.app"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.vengala.app"
+        applicationId = "com.bengala.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 12
-        versionName = "1.2.0"
+        versionCode = 13
+        versionName = "1.2.1"
     }
 
     signingConfigs {

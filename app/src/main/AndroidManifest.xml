@@ -33,18 +33,18 @@
     <uses-feature android:name="android.hardware.sensor.compass" android:required="false" />
 
     <application
-        android:name=".VengalaApp"
+        android:name=".BengalaApp"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Vengala">
+        android:theme="@style/Theme.Bengala">
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:screenOrientation="portrait"
-            android:theme="@style/Theme.Vengala">
+            android:theme="@style/Theme.Bengala">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -58,7 +58,7 @@
 
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="com.vengala.app.fileprovider"
+            android:authorities="com.bengala.app.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data
